@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.example.demo.model.Professor;
+import com.example.demo.model.Student;
 import com.example.demo.model.User;
 import com.example.demo.service.UserService;
 
@@ -20,7 +22,12 @@ public class AuthController {
     private UserService userService;
 
     @GetMapping("/login")
-    public String loginPage() {
+    public String loginPage(HttpSession session) {
+        // Se já estiver logado, redirecionar para área apropriada
+        User usuarioLogado = (User) session.getAttribute("usuarioLogado");
+        if (usuarioLogado != null) {
+            return redirecionarPorTipoUsuario(usuarioLogado);
+        }
         return "login";
     }
 
@@ -34,7 +41,7 @@ public class AuthController {
 
         if (usuario.isPresent()) {
             session.setAttribute("usuarioLogado", usuario.get());
-            return "redirect:/home";
+            return redirecionarPorTipoUsuario(usuario.get());
         } else {
             model.addAttribute("erro", "Credenciais inválidas.");
             return "login";
@@ -45,5 +52,17 @@ public class AuthController {
     public String logout(HttpSession session) {
         session.invalidate();
         return "redirect:/auth/login";
+    }
+
+    // Método auxiliar para redirecionamento
+    private String redirecionarPorTipoUsuario(User usuario) {
+        if (usuario instanceof Professor) {
+            return "redirect:/home";
+        } else if (usuario instanceof Student) {
+            return "redirect:/aluno/feed";
+        } else {
+            // Usuário comum - redireciona para feed do aluno
+            return "redirect:/aluno/feed";
+        }
     }
 }

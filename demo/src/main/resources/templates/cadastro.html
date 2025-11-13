@@ -47,6 +47,35 @@
       color: #495057;
       margin-bottom: 8px;
     }
+    .classroom-section {
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      background-color: #f8f9fa;
+    }
+    .classroom-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      background: white;
+    }
+    .classroom-info {
+      flex: 1;
+    }
+    .classroom-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .loading-spinner {
+      display: none;
+      text-align: center;
+      padding: 1rem;
+    }
   </style>
 </head>
 <body class="gradient-bg">
@@ -60,7 +89,7 @@
           </div>
           
           <div class="form-body">
-            <form th:action="@{/cadastro}" method="post">
+            <form th:action="@{/cadastro}" method="post" id="userForm">
               <div class="row">
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Nome Completo</label>
@@ -84,11 +113,48 @@
               
               <div class="mb-4">
                 <label class="form-label">Tipo de Usuário</label>
-                <select name="type" class="form-select" required>
+                <select name="type" class="form-select" required id="userType">
                   <option value="">Selecione o tipo de usuário...</option>
                   <option value="student">Aluno</option>
                   <option value="professor">Professor</option>
                 </select>
+              </div>
+
+              <!-- Seção de Turmas - Visível apenas para alunos -->
+              <div class="classroom-section" id="classroomSection" style="display: none;">
+                <h5 class="form-label mb-3">
+                  <i class="bi bi-journals"></i> Conectar a Turmas Existentes
+                </h5>
+                
+                <!-- Campo de busca -->
+                <div class="mb-3">
+                  <label class="form-label">Buscar Turmas</label>
+                  <div class="input-group">
+                    <input type="text" id="searchClassroom" class="form-control" placeholder="Digite o nome da turma...">
+                    <button type="button" class="btn btn-outline-primary" onclick="searchClassrooms()">
+                      <i class="bi bi-search"></i> Buscar
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Loading spinner -->
+                <div class="loading-spinner" id="loadingSpinner">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                  </div>
+                  <p class="mt-2 mb-0">Carregando turmas...</p>
+                </div>
+
+                <!-- Lista de turmas disponíveis -->
+                <div id="classroomList">
+                  <p class="text-muted text-center">Selecione "Aluno" e busque por turmas para ver as opções disponíveis.</p>
+                </div>
+
+                <!-- Turmas selecionadas -->
+                <div id="selectedClassrooms" style="display: none;">
+                  <h6 class="form-label mt-4">Turmas Selecionadas:</h6>
+                  <div id="selectedClassroomsList"></div>
+                </div>
               </div>
               
               <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -110,9 +176,230 @@
   </div>
 
   <script>
-    document.querySelector('select[name="type"]').addEventListener('change', function() {
+    // Variáveis globais
+    let selectedClassrooms = [];
+    let availableClassrooms = [];
+
+    // Mostrar/ocultar campo de matrícula baseado no tipo de usuário
+    document.getElementById('userType').addEventListener('change', function() {
       const matriculaField = document.getElementById('matriculaField');
-      matriculaField.style.display = this.value === 'student' ? 'block' : 'none';
+      const classroomSection = document.getElementById('classroomSection');
+      
+      if (this.value === 'student') {
+        matriculaField.style.display = 'block';
+        classroomSection.style.display = 'block';
+        loadAvailableClassrooms();
+      } else {
+        matriculaField.style.display = 'none';
+        classroomSection.style.display = 'none';
+        selectedClassrooms = [];
+        updateSelectedClassroomsDisplay();
+      }
+    });
+
+    // Carregar turmas disponíveis
+    async function loadAvailableClassrooms() {
+      const classroomList = document.getElementById('classroomList');
+      const loadingSpinner = document.getElementById('loadingSpinner');
+      
+      loadingSpinner.style.display = 'block';
+      classroomList.innerHTML = '';
+
+      try {
+        const response = await fetch('/api/classrooms');
+        if (response.ok) {
+          availableClassrooms = await response.json();
+          displayClassrooms(availableClassrooms);
+        } else {
+          classroomList.innerHTML = '<p class="text-danger">Erro ao carregar turmas.</p>';
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        classroomList.innerHTML = '<p class="text-danger">Erro ao carregar turmas.</p>';
+      } finally {
+        loadingSpinner.style.display = 'none';
+      }
+    }
+
+    // Buscar turmas
+    async function searchClassrooms() {
+      const searchTerm = document.getElementById('searchClassroom').value.trim();
+      const classroomList = document.getElementById('classroomList');
+      const loadingSpinner = document.getElementById('loadingSpinner');
+      
+      loadingSpinner.style.display = 'block';
+      classroomList.innerHTML = '';
+
+      try {
+        let url = '/api/classrooms';
+        if (searchTerm) {
+          url = `/api/classrooms/search?name=${encodeURIComponent(searchTerm)}`;
+        }
+        
+        const response = await fetch(url);
+        if (response.ok) {
+          availableClassrooms = await response.json();
+          displayClassrooms(availableClassrooms);
+        } else {
+          classroomList.innerHTML = '<p class="text-danger">Erro ao buscar turmas.</p>';
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        classroomList.innerHTML = '<p class="text-danger">Erro ao buscar turmas.</p>';
+      } finally {
+        loadingSpinner.style.display = 'none';
+      }
+    }
+
+    // Exibir lista de turmas
+    function displayClassrooms(classrooms) {
+      const classroomList = document.getElementById('classroomList');
+      
+      if (classrooms.length === 0) {
+        classroomList.innerHTML = '<p class="text-muted text-center">Nenhuma turma encontrada.</p>';
+        return;
+      }
+
+      let html = '<div class="mb-3"><strong>Turmas Disponíveis:</strong></div>';
+      
+      classrooms.forEach(classroom => {
+        const isSelected = selectedClassrooms.some(sc => sc.id === classroom.id);
+        html += `
+          <div class="classroom-item">
+            <div class="classroom-info">
+              <strong>${classroom.name || 'Turma sem nome'}</strong>
+              ${classroom.description ? `<br><small class="text-muted">${classroom.description}</small>` : ''}
+            </div>
+            <div class="classroom-actions">
+              ${isSelected ? 
+                `<button type="button" class="btn btn-sm btn-danger" onclick="removeClassroom(${classroom.id})">
+                  <i class="bi bi-x-lg"></i> Remover
+                </button>` :
+                `<button type="button" class="btn btn-sm btn-success" onclick="addClassroom(${classroom.id})">
+                  <i class="bi bi-plus-lg"></i> Adicionar
+                </button>`
+              }
+            </div>
+          </div>
+        `;
+      });
+      
+      classroomList.innerHTML = html;
+    }
+
+    // Adicionar turma à lista de selecionadas
+    function addClassroom(classroomId) {
+      const classroom = availableClassrooms.find(c => c.id === classroomId);
+      if (classroom && !selectedClassrooms.some(sc => sc.id === classroomId)) {
+        selectedClassrooms.push(classroom);
+        updateSelectedClassroomsDisplay();
+        displayClassrooms(availableClassrooms); // Atualiza a lista para mostrar o botão "Remover"
+      }
+    }
+
+    // Remover turma da lista de selecionadas
+    function removeClassroom(classroomId) {
+      selectedClassrooms = selectedClassrooms.filter(sc => sc.id !== classroomId);
+      updateSelectedClassroomsDisplay();
+      displayClassrooms(availableClassrooms); // Atualiza a lista para mostrar o botão "Adicionar"
+    }
+
+    // Atualizar exibição das turmas selecionadas
+    function updateSelectedClassroomsDisplay() {
+      const selectedContainer = document.getElementById('selectedClassrooms');
+      const selectedList = document.getElementById('selectedClassroomsList');
+      
+      if (selectedClassrooms.length > 0) {
+        let html = '';
+        selectedClassrooms.forEach(classroom => {
+          html += `
+            <div class="classroom-item">
+              <div class="classroom-info">
+                <strong>${classroom.name || 'Turma sem nome'}</strong>
+                ${classroom.description ? `<br><small class="text-muted">${classroom.description}</small>` : ''}
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeClassroom(${classroom.id})">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          `;
+        });
+        selectedList.innerHTML = html;
+        selectedContainer.style.display = 'block';
+      } else {
+        selectedContainer.style.display = 'none';
+      }
+    }
+
+    // Manipular envio do formulário
+    document.getElementById('userForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      const userType = document.getElementById('userType').value;
+      
+      // Preparar dados do usuário
+      const userData = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        password: formData.get('password'),
+        type: userType
+      };
+      
+      if (userType === 'student') {
+        userData.matricula = formData.get('matricula');
+      }
+
+      try {
+        // Primeiro, criar o usuário
+        const createResponse = await fetch('/api/users?type=' + userType, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(userData)
+        });
+
+        if (createResponse.ok) {
+          const newUser = await createResponse.json();
+          
+          // Se for aluno e houver turmas selecionadas, conectar às turmas
+          if (userType === 'student' && selectedClassrooms.length > 0) {
+            await connectUserToClassrooms(newUser.id);
+          }
+          
+          alert('Usuário cadastrado com sucesso!');
+          window.location.href = '/usuarios';
+        } else {
+          alert('Erro ao cadastrar usuário.');
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao cadastrar usuário.');
+      }
+    });
+
+    // Conectar usuário às turmas selecionadas
+    async function connectUserToClassrooms(userId) {
+      for (const classroom of selectedClassrooms) {
+        try {
+          await fetch(`/api/users/${userId}/classrooms/${classroom.id}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+        } catch (error) {
+          console.error(`Erro ao conectar usuário à turma ${classroom.id}:`, error);
+        }
+      }
+    }
+
+    // Carregar turmas disponíveis quando a página carregar (se já for aluno)
+    document.addEventListener('DOMContentLoaded', function() {
+      if (document.getElementById('userType').value === 'student') {
+        loadAvailableClassrooms();
+      }
     });
   </script>
 </body>

@@ -10,9 +10,10 @@ import java.util.*;
 
 @Service
 public class UserService {
-
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private ClassroomRepository classroomRepository;
     @Autowired
     private StudentRepository studentRepository;
     @Autowired
@@ -106,4 +107,50 @@ public class UserService {
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
+
+        public User connectToClassroom(Long userId, Long classroomId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + userId));
+        
+        Classroom classroom = classroomRepository.findById(classroomId)
+            .orElseThrow(() -> new RuntimeException("Classroom não encontrada com ID: " + classroomId));
+        
+        user.addClassroom(classroom);
+        return userRepository.save(user);
+    }
+
+    // 🔹 Desconectar usuário de uma classroom
+    public void disconnectFromClassroom(Long userId, Long classroomId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + userId));
+        
+        Classroom classroom = user.findClassroomById(classroomId)
+            .orElseThrow(() -> new RuntimeException("Classroom não encontrada para este usuário: " + classroomId));
+        
+        user.removeClassroom(classroom);
+        userRepository.save(user);
+    }
+
+    // 🔹 Listar classrooms do usuário
+    public List<Classroom> getUserClassrooms(Long userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + userId));
+        return user.getClassrooms();
+    }
+
+    // 🔹 Listar usuários de uma classroom
+    public List<User> getClassroomUsers(Long classroomId) {
+        Classroom classroom = classroomRepository.findById(classroomId)
+            .orElseThrow(() -> new RuntimeException("Classroom não encontrada com ID: " + classroomId));
+        return classroom.getUsers();
+    }
+
+    // 🔹 Verificar se usuário está em uma classroom
+    public boolean isUserInClassroom(Long userId, Long classroomId) {
+        return userRepository.findById(userId)
+            .map(user -> user.getClassrooms().stream()
+                .anyMatch(classroom -> classroom.getId().equals(classroomId)))
+            .orElse(false);
+    }
 }
+

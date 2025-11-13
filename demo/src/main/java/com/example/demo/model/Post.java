@@ -2,9 +2,13 @@ package com.example.demo.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
-@Table(name = "posts") // Mudando para plural (convenção)
+@Table(name = "posts")
 public class Post {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,13 +22,22 @@ public class Post {
     private User author;
 
     private LocalDateTime createdAt = LocalDateTime.now();
-
     private LocalDateTime updatedAt = LocalDateTime.now();
 
     @Enumerated(EnumType.STRING)
-    private PostType type = PostType.GENERAL; // GERAL, IMPORTANTE, EVENTO, etc.
+    private PostType type = PostType.GENERAL;
 
-    private boolean pinned = false; // para fixar posts importantes
+    private boolean pinned = false;
+
+    // 🔹 Nova relação Many-to-Many com Classroom
+    @ManyToMany
+    @JoinTable(
+        name = "post_classrooms",
+        joinColumns = @JoinColumn(name = "post_id"),
+        inverseJoinColumns = @JoinColumn(name = "classroom_id")
+    )
+    @JsonIgnore
+    private List<Classroom> classrooms = new ArrayList<>();
 
     // construtores
     public Post() {}
@@ -66,4 +79,19 @@ public class Post {
 
     public boolean isPinned() { return pinned; }
     public void setPinned(boolean pinned) { this.pinned = pinned; }
+
+    // 🔹 Novos getters e setters para classrooms
+    public List<Classroom> getClassrooms() { return classrooms; }
+    public void setClassrooms(List<Classroom> classrooms) { this.classrooms = classrooms; }
+
+    // 🔹 Métodos utilitários para manipulação da lista
+    public void addClassroom(Classroom classroom) {
+        this.classrooms.add(classroom);
+        classroom.getPosts().add(this);
+    }
+
+    public void removeClassroom(Classroom classroom) {
+        this.classrooms.remove(classroom);
+        classroom.getPosts().remove(this);
+    }
 }

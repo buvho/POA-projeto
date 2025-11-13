@@ -2,6 +2,8 @@ package com.example.demo.repository;
 
 import com.example.demo.model.Classroom;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,4 +16,7 @@ public interface ClassroomRepository extends JpaRepository<Classroom, Long> {
     
     // 🔹 Verificar se existe classroom com determinado nome
     boolean existsByName(String name);
+
+    @Query("SELECT c FROM Classroom c JOIN c.users u WHERE u.id = :userId")
+    List<Classroom> findByUserId(@Param("userId") Long userId);
 }

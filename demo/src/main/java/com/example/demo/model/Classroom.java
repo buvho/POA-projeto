@@ -5,12 +5,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-// No arquivo Classroom.java
 @Entity
 public class Classroom {
     @Id
@@ -20,8 +16,7 @@ public class Classroom {
     private String name;
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // 🔹 Lado inverso do Many-to-Many
-        
+    // 🔹 Relação Many-to-Many com User
     @ManyToMany
     @JoinTable(
         name = "classroom_user",
@@ -30,6 +25,11 @@ public class Classroom {
     )
     @JsonIgnore
     private List<User> users = new ArrayList<>();
+
+    // 🔹 Nova relação Many-to-Many com Post (lado inverso)
+    @ManyToMany(mappedBy = "classrooms")
+    @JsonIgnore
+    private List<Post> posts = new ArrayList<>();
 
     // construtores
     public Classroom() {}
@@ -49,4 +49,8 @@ public class Classroom {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    // 🔹 Novos getters e setters para posts
+    public List<Post> getPosts() { return posts; }
+    public void setPosts(List<Post> posts) { this.posts = posts; }
 }

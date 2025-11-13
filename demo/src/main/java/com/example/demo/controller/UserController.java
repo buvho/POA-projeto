@@ -125,4 +125,5 @@ public class UserController {
         boolean isMember = service.isUserInClassroom(userId, classroomId);
         return ResponseEntity.ok(isMember);
     }
+    
 }

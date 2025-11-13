@@ -69,7 +69,32 @@ public class UserService {
 
     // 🔹 Deletar
     public void delete(Long id) {
-        userRepository.deleteById(id);
+    // Primeiro desconecta de todas as classrooms
+    User user = userRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+    
+    // Remove todas as associações com classrooms
+    List<Classroom> userClassrooms = new ArrayList<>(user.getClassrooms());
+    for (Classroom classroom : userClassrooms) {
+        user.removeClassroom(classroom);
+    }
+    userRepository.save(user); // Salva sem as classrooms
+    
+    // Agora tenta excluir das tabelas filhas
+    try {
+        studentRepository.deleteById(id);
+    } catch (Exception e) {
+        // Ignora se não for student
+    }
+    
+    try {
+        professorRepository.deleteById(id);
+    } catch (Exception e) {
+        // Ignora se não for professor
+    }
+    
+    // Finalmente exclui o user
+    userRepository.deleteById(id);
     }
 
     // 🔹 SALVAR usuário (método novo - importante para edição)

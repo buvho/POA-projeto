@@ -9,6 +9,8 @@ import java.util.Optional;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
 public class User {
@@ -28,6 +30,7 @@ public class User {
         joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "classroom_id")
     )
+    @JsonIgnore
     private List<Classroom> classrooms = new ArrayList<>();
 
     // construtores

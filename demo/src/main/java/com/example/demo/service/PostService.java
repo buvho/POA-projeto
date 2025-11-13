@@ -3,8 +3,11 @@ package com.example.demo.service;
 import com.example.demo.model.Post;
 import com.example.demo.model.PostType;
 import com.example.demo.model.User;
+import com.example.demo.model.Classroom;
 import com.example.demo.repository.PostRepository;
+import com.example.demo.repository.ClassroomRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,11 +15,14 @@ import java.util.Optional;
 @Service
 public class PostService {
     private final PostRepository repo;
+    private final ClassroomRepository classroomRepository;
     
-    public PostService(PostRepository repo) {
+    public PostService(PostRepository repo, ClassroomRepository classroomRepository) {
         this.repo = repo;
+        this.classroomRepository = classroomRepository;
     }
 
+    // Métodos existentes...
     public List<Post> findAll() {
         return repo.findAllOrderByPinnedAndDate();
     }
@@ -72,4 +78,73 @@ public class PostService {
         }
         repo.deleteById(id);
     }
+
+    // 🔹 NOVOS MÉTODOS PARA MANIPULAR A RELAÇÃO COM CLASSROOMS
+
+    public List<Post> findByClassroom(Long classroomId) {
+        return repo.findByClassroomId(classroomId);
+    }
+
+    public List<Post> findPinnedPostsByClassroom(Long classroomId) {
+        return repo.findPinnedPostsByClassroomId(classroomId);
+    }
+
+    public List<Post> findByClassroomAndType(Long classroomId, PostType type) {
+        return repo.findByClassroomIdAndType(classroomId, type);
+    }
+    
+
+    @Transactional
+    public Post addClassroomToPost(Long postId, Long classroomId) {
+        Post post = repo.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post não encontrado com id: " + postId));
+        Classroom classroom = classroomRepository.findById(classroomId)
+                .orElseThrow(() -> new RuntimeException("Classroom não encontrado com id: " + classroomId));
+        
+        post.addClassroom(classroom);
+        return repo.save(post);
+    }
+
+    @Transactional
+    public Post removeClassroomFromPost(Long postId, Long classroomId) {
+        Post post = repo.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post não encontrado com id: " + postId));
+        Classroom classroom = classroomRepository.findById(classroomId)
+                .orElseThrow(() -> new RuntimeException("Classroom não encontrado com id: " + classroomId));
+        
+        post.removeClassroom(classroom);
+        return repo.save(post);
+    }
+
+    @Transactional
+    public Post updatePostClassrooms(Long postId, List<Long> classroomIds) {
+        Post post = repo.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post não encontrado com id: " + postId));
+        
+        // Limpa classrooms atuais
+        post.getClassrooms().clear();
+        
+        // Adiciona novos classrooms
+        for (Long classroomId : classroomIds) {
+            Classroom classroom = classroomRepository.findById(classroomId)
+                    .orElseThrow(() -> new RuntimeException("Classroom não encontrado com id: " + classroomId));
+            post.addClassroom(classroom);
+        }
+        
+        return repo.save(post);
+    }
+
+    public List<Post> findByClassrooms(List<Long> classroomIds) {
+        if (classroomIds == null || classroomIds.isEmpty()) {
+            return List.of();
+        }
+        return repo.findByClassroomsIdIn(classroomIds);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Post> findPostsByUserClassrooms(Long userId) {
+        return repo.findPostsByUserClassrooms(userId);
+}
+
+    
 }

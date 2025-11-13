@@ -197,20 +197,20 @@
       <div class="row align-items-center">
         <div class="col-md-8">
           <h1><i class="bi bi-mortarboard"></i> 
-            <span th:if="${aluno.type == 'Aluno'}">Área do Aluno</span>
-            <span th:if="${aluno.type == 'Professor'}">Feed dos Alunos</span>
+            <span th:if="${user.type == 'Aluno'}">Área do Aluno</span>
+            <span th:if="${user.type == 'Professor'}">Área do Professor</span>
           </h1>
-          <p class="lead mb-0">Compartilhe e acompanhe as publicações da sua turma</p>
+          <p class="lead mb-0">Compartilhe e acompanhe as publicações das suas turmas</p>
         </div>
         <div class="col-md-4 text-md-end">
           <div class="d-flex align-items-center justify-content-end">
             <div class="text-white text-end me-3">
-              <h6 class="mb-0" th:text="${aluno.name}"></h6>
-              <small th:if="${aluno.type == 'Aluno'}" th:text="${aluno.matricula} ?: 'Sem matrícula'"></small>
-              <small th:if="${aluno.type == 'Professor'}">Professor</small>
+              <h6 class="mb-0" th:text="${user.name}">Nome do Usuário</h6>
+              <small th:if="${user.type == 'Aluno'}" th:text="${user.matricula} ?: 'Sem matrícula'">Matrícula</small>
+              <small th:if="${user.type == 'Professor'}">Professor</small>
             </div>
-            <a href="/home" class="btn btn-light btn-sm" th:if="${aluno.type == 'Professor'}">
-              <i class="bi bi-arrow-left"></i> Voltar
+            <a href="/home" class="btn btn-light btn-sm">
+              <i class="bi bi-house"></i> Início
             </a>
           </div>
         </div>
@@ -222,7 +222,7 @@
     <!-- Mensagem de Sucesso -->
     <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show" role="alert">
       <i class="bi bi-check-circle-fill me-2"></i>
-      <span th:text="${param.success}"></span>
+      <span th:text="${param.success}">Operação realizada com sucesso!</span>
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
@@ -230,37 +230,38 @@
     <div class="row mb-4">
       <div class="col-md-4">
         <div class="stats-card">
-          <h3 class="text-primary" th:text="${totalPosts}">0</h3>
+          <h3 class="text-primary" th:text="${totalPosts} ?: 0">0</h3>
           <p class="mb-0 text-muted">Total de Publicações</p>
         </div>
       </div>
       <div class="col-md-4">
         <div class="stats-card">
-          <h3 class="text-info" th:text="${postsProfessores}">0</h3>
+          <h3 class="text-info" th:text="${postsProfessores} ?: 0">0</h3>
           <p class="mb-0 text-muted">Posts de Professores</p>
         </div>
       </div>
       <div class="col-md-4">
         <div class="stats-card">
-          <h3 class="text-danger" th:text="${postsImportantes}">0</h3>
+          <h3 class="text-danger" th:text="${postsImportantes} ?: 0">0</h3>
           <p class="mb-0 text-muted">Avisos Importantes</p>
         </div>
       </div>
     </div>
 
-    <!-- Card de Criar Post -->
-    <div class="create-post-card">
+    <!-- Card de Criar Post - PARA ALUNOS E PROFESSORES -->
+    <div class="create-post-card" th:if="${userClassrooms != null and !userClassrooms.empty}">
       <div class="d-flex align-items-center mb-3">
-        <div th:class="${aluno.type == 'Professor'} ? 'author-avatar avatar-professor' : 'author-avatar avatar-student'" 
+        <div th:class="${user.type == 'Professor'} ? 'author-avatar avatar-professor' : 'author-avatar avatar-student'" 
              class="author-avatar me-3">
-          <span th:text="${aluno.name.substring(0, 1).toUpperCase()}"></span>
+          <span th:text="${user.name.substring(0, 1).toUpperCase()}">U</span>
         </div>
         <div>
-          <h6 class="mb-0" th:text="${aluno.name}"></h6>
-          <small class="text-muted" th:text="${aluno.type}"></small>
+          <h6 class="mb-0" th:text="${user.name}">Usuário</h6>
+          <small class="text-muted" th:text="${user.type}">Tipo</small>
         </div>
       </div>
       
+      <!-- FORMULÁRIO SIMPLES -->
       <form th:action="@{/aluno/feed/post}" method="post">
         <div class="mb-3">
           <textarea class="form-control" name="content" rows="3" 
@@ -273,16 +274,26 @@
         </div>
         
         <div class="row align-items-center">
-          <div class="col-md-6">
+          <div class="col-md-4">
             <select class="form-select" name="type" required>
               <option value="">Selecione o tipo...</option>
-              <option th:each="postType : ${postTypes}" 
-                      th:value="${postType}" 
-                      th:text="${postType.name()}">
+              <option value="GENERAL">Geral</option>
+              <option value="IMPORTANT">Importante</option>
+              <option value="EVENT">Evento</option>
+              <option value="ANNOUNCEMENT">Anúncio</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <select class="form-select" name="classroomId" required>
+              <option value="">Selecione a turma...</option>
+              <option th:each="classroom : ${userClassrooms}" 
+                      th:value="${classroom.id}" 
+                      th:text="${classroom.name}">
+                Turma
               </option>
             </select>
           </div>
-          <div class="col-md-6 text-md-end mt-2 mt-md-0">
+          <div class="col-md-4 text-md-end mt-2 mt-md-0">
             <button type="submit" class="btn btn-student">
               <i class="bi bi-send-fill me-2"></i> Publicar
             </button>
@@ -293,12 +304,12 @@
 
     <!-- Filtros -->
     <div class="filter-card">
-      <div class="row g-3 align-items-end">
-        <!-- Barra de Pesquisa -->
-        <div class="col-md-4">
-          <form th:action="@{/aluno/feed}" method="get">
-            <input type="hidden" name="turma" th:value="${turmaFiltro}">
-            <input type="hidden" name="apenasProfessores" th:value="${apenasProfessores}">
+      <!-- FORMULÁRIO ÚNICO PARA TODOS OS FILTROS -->
+      <form th:action="@{/aluno/feed}" method="get" id="filterForm">
+        <div class="row g-3 align-items-end">
+          <!-- Barra de Pesquisa -->
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Pesquisar</label>
             <div class="input-group">
               <input type="text" class="form-control search-box" name="search" 
                      th:value="${searchTerm}" placeholder="Pesquisar publicações...">
@@ -306,102 +317,182 @@
                 <i class="bi bi-search"></i>
               </button>
             </div>
-          </form>
-        </div>
-        
-        <!-- Filtro de Turma -->
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">Filtrar por Turma</label>
-          <form th:action="@{/aluno/feed}" method="get" id="turmaForm">
-            <input type="hidden" name="apenasProfessores" th:value="${apenasProfessores}">
-            <input type="hidden" name="search" th:value="${searchTerm}">
-            <select class="form-select" name="turma" onchange="document.getElementById('turmaForm').submit()">
-              <option value="">Todas as turmas</option>
-              <option value="turmaA" th:selected="${turmaFiltro == 'turmaA'}">Turma A</option>
-              <option value="turmaB" th:selected="${turmaFiltro == 'turmaB'}">Turma B</option>
-              <option value="turmaC" th:selected="${turmaFiltro == 'turmaC'}">Turma C</option>
+          </div>
+          
+          <!-- Filtro de Turma -->
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Filtrar por Turma</label>
+            <select class="form-select" name="classroomId" onchange="document.getElementById('filterForm').submit()">
+              <option value="">Todas as minhas turmas</option>
+              <option th:each="classroom : ${userClassrooms}" 
+                      th:value="${classroom.id}" 
+                      th:selected="${classroomFilter == classroom.id}"
+                      th:text="${classroom.name}">
+                Turma
+              </option>
             </select>
-          </form>
-        </div>
-        
-        <!-- Filtro de Professores -->
-        <div class="col-md-3">
-          <form th:action="@{/aluno/feed}" method="get">
-            <input type="hidden" name="turma" th:value="${turmaFiltro}">
-            <input type="hidden" name="search" th:value="${searchTerm}">
+          </div>
+          
+          <!-- Filtro de Professores -->
+          <div class="col-md-3">
+            <label class="form-label fw-semibold d-block">Tipo de Autor</label>
             <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="apenasProfessores" 
-                     name="apenasProfessores" value="true" 
-                     th:checked="${apenasProfessores}" onchange="this.form.submit()">
-              <label class="form-check-label fw-semibold" for="apenasProfessores">
+              <input class="form-check-input" type="checkbox" id="professorsOnly" 
+                name="professorsOnly" value="true" 
+                th:checked="${professorsOnly != null and professorsOnly}" onchange="document.getElementById('filterForm').submit()">
+              <label class="form-check-label fw-semibold" for="professorsOnly">
                 Apenas posts de professores
               </label>
             </div>
-          </form>
+          </div>
+          
+          <!-- Limpar Filtros -->
+          <div class="col-md-2">
+            <label class="form-label fw-semibold d-block" style="visibility: hidden;">Limpar</label>
+            <a th:href="@{/aluno/feed}" class="btn btn-outline-secondary w-100">
+              <i class="bi bi-arrow-clockwise"></i> Limpar
+            </a>
+          </div>
         </div>
-        
-        <!-- Limpar Filtros -->
-        <div class="col-md-2">
-          <a th:href="@{/aluno/feed}" class="btn btn-outline-secondary w-100">
-            <i class="bi bi-arrow-clockwise"></i> Limpar
-          </a>
-        </div>
-      </div>
+      </form>
       
       <!-- Filtros Ativos -->
-      <div th:if="${turmaFiltro or apenasProfessores or searchTerm}" class="mt-3">
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-          <small class="text-muted">Filtros ativos:</small>
-          <span th:if="${searchTerm}" class="badge bg-primary">
-            Pesquisa: "<span th:text="${searchTerm}"></span>"
-            <a th:href="@{/aluno/feed(turma=${turmaFiltro}, apenasProfessores=${apenasProfessores})}" class="text-white ms-1">
-              <i class="bi bi-x"></i>
-            </a>
-          </span>
-          <span th:if="${apenasProfessores}" class="badge bg-info">
-            Apenas professores
-            <a th:href="@{/aluno/feed(turma=${turmaFiltro}, search=${searchTerm})}" class="text-white ms-1">
-              <i class="bi bi-x"></i>
-            </a>
-          </span>
-          <span th:if="${turmaFiltro}" class="badge bg-success">
-            Turma: <span th:text="${turmaFiltro}"></span>
-            <a th:href="@{/aluno/feed(apenasProfessores=${apenasProfessores}, search=${searchTerm})}" class="text-white ms-1">
-              <i class="bi bi-x"></i>
-            </a>
-          </span>
-        </div>
-      </div>
-    </div>
-
+      <div th:if="${classroomFilter != null or professorsOnly != null or (searchTerm != null and searchTerm != '')}" class="mt-3">
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <small class="text-muted">Filtros ativos:</small>
+    
+    <!-- Filtro de pesquisa -->
+    <span th:if="${searchTerm != null and searchTerm != ''}" class="badge bg-primary">
+      Pesquisa: "<span th:text="${searchTerm}"></span>"
+      <a th:href="@{/aluno/feed(classroomId=${classroomFilter}, professorsOnly=${professorsOnly})}" 
+         class="text-white ms-1">
+        <i class="bi bi-x"></i>
+      </a>
+    </span>
+    
+    <!-- Filtro de professores -->
+    <span th:if="${professorsOnly != null and professorsOnly}" class="badge bg-info">
+      Apenas professores
+      <a th:href="@{/aluno/feed(classroomId=${classroomFilter}, search=${searchTerm})}" 
+         class="text-white ms-1">
+        <i class="bi bi-x"></i>
+      </a>
+    </span>
+    
+    <!-- Filtro de turma -->
+    <span th:if="${classroomFilter != null}" class="badge bg-success">
+      Turma: 
+      <span th:each="classroom : ${userClassrooms}" 
+            th:if="${classroomFilter == classroom.id}" 
+            th:text="${classroom.name}">
+      </span>
+      <a th:href="@{/aluno/feed(professorsOnly=${professorsOnly}, search=${searchTerm})}" 
+         class="text-white ms-1">
+        <i class="bi bi-x"></i>
+      </a>
+    </span>
+  </div>
+</div>
     <!-- Lista de Posts -->
-    <div th:if="${#lists.isEmpty(posts)}" class="empty-state">
+    <div th:if="${posts == null or posts.empty}" class="empty-state">
       <i class="bi bi-chat-dots" style="font-size: 4rem;"></i>
-      <h3 class="mt-3" th:text="${searchTerm or turmaFiltro or apenasProfessores} ? 'Nenhum post encontrado' : 'Nenhum post ainda'"></h3>
-      <p class="text-muted" th:text="${searchTerm} ? 'Tente ajustar os termos da pesquisa' : 'Seja o primeiro a compartilhar algo!'"></p>
+      <h3 class="mt-3" th:text="${(searchTerm != null and searchTerm != '') or classroomFilter != null or professorsOnly != null} ? 'Nenhum post encontrado' : 'Nenhum post ainda'"></h3>
+      <p class="text-muted" th:text="${(searchTerm != null and searchTerm != '')} ? 'Tente ajustar os termos da pesquisa' : 'Seja o primeiro a compartilhar algo!'"></p>
       <a th:href="@{/aluno/feed}" class="btn btn-student">
         <i class="bi bi-arrow-clockwise"></i> Limpar Filtros
       </a>
     </div>
 
-    <div th:unless="${#lists.isEmpty(posts)}">
+    <div th:unless="${posts == null or posts.empty}">
       <!-- Posts Fixados -->
       <div th:if="${#lists.size(posts.?[pinned])} > 0" class="mb-4">
         <h4 class="mb-3"><i class="bi bi-pin-angle text-warning"></i> Posts Fixados</h4>
-        <div th:each="post : ${posts.?[pinned]}" 
-             th:classappend="${post.pinned} ? 'pinned' : ''" 
-             th:classappend="${post.author.type == 'Professor'} ? 'professor-post' : ''"
-             class="post-card">
+        
+        <div th:each="post : ${posts}" 
+             th:if="${post.pinned}">
+          <div th:class="'post-card' + 
+                    (${post.pinned} ? ' pinned' : '') + 
+                    (${post.author.type == 'Professor'} ? ' professor-post' : '')">
+            <div class="post-header">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="d-flex align-items-center">
+                  <div th:class="${post.author.type == 'Professor'} ? 'author-avatar avatar-professor' : 'author-avatar avatar-student'" 
+                       class="author-avatar me-3">
+                    <span th:text="${post.author.name.substring(0, 1).toUpperCase()}">A</span>
+                  </div>
+                  <div>
+                    <h6 class="mb-0 d-flex align-items-center">
+                      <span th:text="${post.author.name}">Autor</span>
+                      <span th:if="${post.author.type == 'Professor'}" 
+                            class="professor-badge ms-2">
+                        <i class="bi bi-person-badge"></i> Professor
+                      </span>
+                      <span th:if="${post.author.type == 'Aluno'}" 
+                            class="student-badge ms-2">
+                        <i class="bi bi-mortarboard"></i> Aluno
+                      </span>
+                    </h6>
+                    <small class="text-muted" th:text="${post.author.email}">email@exemplo.com</small>
+                  </div>
+                </div>
+                <div class="text-end">
+                  <span class="pinned-indicator text-warning">
+                    <i class="bi bi-pin-angle-fill"></i> Fixado
+                  </span>
+                  <div class="time-ago mt-1" th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="post-body">
+              <p class="mb-2" th:text="${post.content}">Conteúdo do post...</p>
+              <span th:class="'badge badge-type badge-' + ${post.type.name().toLowerCase()}" 
+                    th:text="${post.type.name()}">
+                Tipo
+              </span>
+              <!-- Mostrar turmas do post -->
+              <div th:if="${post.classrooms != null and !post.classrooms.empty}" class="mt-2">
+                <small class="text-muted">
+                  <i class="bi bi-people-fill"></i>
+                  <span th:each="classroom, iter : ${post.classrooms}">
+                    <span th:text="${classroom.name}">Turma</span><span th:if="${!iter.last}">, </span>
+                  </span>
+                </small>
+              </div>
+            </div>
+            
+            <div class="post-footer">
+              <small class="text-muted">
+                <i class="bi bi-clock"></i> 
+                Publicado em: <span th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</span>
+                <span th:if="${post.updatedAt != null and post.updatedAt != post.createdAt}">
+                  • Atualizado: <span th:text="${#temporals.format(post.updatedAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 11:00</span>
+                </span>
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Todos os Posts -->
+      <h4 class="mb-3" th:if="${#lists.size(posts.?[pinned])} > 0">
+        <i class="bi bi-chat-text"></i> Todas as Publicações
+      </h4>
+
+      <div th:each="post : ${posts}" 
+           th:unless="${post.pinned}">
+        <div th:class="'post-card' + 
+                  (${post.author.type == 'Professor'} ? ' professor-post' : '')">
           <div class="post-header">
             <div class="d-flex justify-content-between align-items-start">
               <div class="d-flex align-items-center">
                 <div th:class="${post.author.type == 'Professor'} ? 'author-avatar avatar-professor' : 'author-avatar avatar-student'" 
                      class="author-avatar me-3">
-                  <span th:text="${post.author.name.substring(0, 1).toUpperCase()}"></span>
+                  <span th:text="${post.author.name.substring(0, 1).toUpperCase()}">A</span>
                 </div>
                 <div>
                   <h6 class="mb-0 d-flex align-items-center">
-                    <span th:text="${post.author.name}"></span>
+                    <span th:text="${post.author.name}">Autor</span>
                     <span th:if="${post.author.type == 'Professor'}" 
                           class="professor-badge ms-2">
                       <i class="bi bi-person-badge"></i> Professor
@@ -411,86 +502,39 @@
                       <i class="bi bi-mortarboard"></i> Aluno
                     </span>
                   </h6>
-                  <small class="text-muted" th:text="${post.author.email}"></small>
+                  <small class="text-muted" th:text="${post.author.email}">email@exemplo.com</small>
                 </div>
               </div>
-              <div class="text-end">
-                <span class="pinned-indicator text-warning">
-                  <i class="bi bi-pin-angle-fill"></i> Fixado
-                </span>
-                <div class="time-ago mt-1" th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}"></div>
-              </div>
+              <div class="time-ago" th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</div>
             </div>
           </div>
           
           <div class="post-body">
-            <p class="mb-2" th:text="${post.content}"></p>
+            <p class="mb-2" th:text="${post.content}">Conteúdo do post...</p>
             <span th:class="'badge badge-type badge-' + ${post.type.name().toLowerCase()}" 
                   th:text="${post.type.name()}">
+              Tipo
             </span>
+            <!-- Mostrar turmas do post -->
+            <div th:if="${post.classrooms != null and !post.classrooms.empty}" class="mt-2">
+              <small class="text-muted">
+                <i class="bi bi-people-fill"></i>
+                <span th:each="classroom, iter : ${post.classrooms}">
+                  <span th:text="${classroom.name}">Turma</span><span th:if="${!iter.last}">, </span>
+                </span>
+              </small>
+            </div>
           </div>
           
           <div class="post-footer">
             <small class="text-muted">
               <i class="bi bi-clock"></i> 
-              Publicado em: <span th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
-              <span th:if="${post.updatedAt != post.createdAt}">
-                • Atualizado: <span th:text="${#temporals.format(post.updatedAt, 'dd/MM/yyyy HH:mm')}"></span>
+              Publicado em: <span th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</span>
+              <span th:if="${post.updatedAt != null and post.updatedAt != post.createdAt}">
+                • Atualizado: <span th:text="${#temporals.format(post.updatedAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 11:00</span>
               </span>
             </small>
           </div>
-        </div>
-      </div>
-
-      <!-- Todos os Posts -->
-      <h4 class="mb-3" th:if="${#lists.size(posts.?[pinned])} > 0">
-        <i class="bi bi-chat-text"></i> Todas as Publicações
-      </h4>
-      
-      <div th:each="post : ${posts.?[!pinned]}" 
-           th:classappend="${post.author.type == 'Professor'} ? 'professor-post' : ''"
-           class="post-card">
-        <div class="post-header">
-          <div class="d-flex justify-content-between align-items-start">
-            <div class="d-flex align-items-center">
-              <div th:class="${post.author.type == 'Professor'} ? 'author-avatar avatar-professor' : 'author-avatar avatar-student'" 
-                   class="author-avatar me-3">
-                <span th:text="${post.author.name.substring(0, 1).toUpperCase()}"></span>
-              </div>
-              <div>
-                <h6 class="mb-0 d-flex align-items-center">
-                  <span th:text="${post.author.name}"></span>
-                  <span th:if="${post.author.type == 'Professor'}" 
-                        class="professor-badge ms-2">
-                    <i class="bi bi-person-badge"></i> Professor
-                  </span>
-                  <span th:if="${post.author.type == 'Aluno'}" 
-                        class="student-badge ms-2">
-                    <i class="bi bi-mortarboard"></i> Aluno
-                  </span>
-                </h6>
-                <small class="text-muted" th:text="${post.author.email}"></small>
-              </div>
-            </div>
-            <div class="time-ago" th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}"></div>
-          </div>
-        </div>
-        
-        <div class="post-body">
-          <p class="mb-2" th:text="${post.content}"></p>
-          <span th:class="'badge badge-type badge-' + ${post.type.name().toLowerCase()}" 
-                th:text="${post.type.name()}">
-          </span>
-        </div>
-        
-        <div class="post-footer">
-          <small class="text-muted">
-            <i class="bi bi-clock"></i> 
-            Publicado em: <span th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
-            <span th:if="${post.updatedAt != post.createdAt}">
-              • Atualizado: <span th:text="${#temporals.format(post.updatedAt, 'dd/MM/yyyy HH:mm')}"></span>
-            </span>
-          </small>
         </div>
       </div>
     </div>

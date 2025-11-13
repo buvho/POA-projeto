@@ -4,29 +4,43 @@ import com.example.demo.model.Post;
 import com.example.demo.model.PostType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Repository;
-
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 
-@Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
     
-    // Encontrar posts por autor
+    // Métodos existentes...
     List<Post> findByAuthorId(Long authorId);
-    
-    // Encontrar posts por tipo
     List<Post> findByType(PostType type);
-    
-    // Encontrar posts fixados
+    List<Post> findByContentContainingIgnoreCase(String keyword);
     List<Post> findByPinnedTrue();
     
-    // Encontrar posts mais recentes primeiro
-    List<Post> findAllByOrderByCreatedAtDesc();
-    
-    // Buscar posts por conteúdo (like)
-    List<Post> findByContentContainingIgnoreCase(String keyword);
-    
-    // Posts fixados no topo, depois os mais recentes
     @Query("SELECT p FROM Post p ORDER BY p.pinned DESC, p.createdAt DESC")
     List<Post> findAllOrderByPinnedAndDate();
+
+    // 🔹 Novos métodos para buscar posts por classroom
+    @Query("SELECT p FROM Post p JOIN p.classrooms c WHERE c.id = :classroomId ORDER BY p.pinned DESC, p.createdAt DESC")
+    List<Post> findByClassroomId(@Param("classroomId") Long classroomId);
+
+    @Query("SELECT p FROM Post p JOIN p.classrooms c WHERE c.id = :classroomId AND p.pinned = true")
+    List<Post> findPinnedPostsByClassroomId(@Param("classroomId") Long classroomId);
+
+    @Query("SELECT p FROM Post p JOIN p.classrooms c WHERE c.id = :classroomId AND p.type = :type")
+    List<Post> findByClassroomIdAndType(@Param("classroomId") Long classroomId, @Param("type") PostType type);
+    
+    @Query("SELECT DISTINCT p FROM Post p JOIN p.classrooms c JOIN c.users u WHERE u.id = :userId ORDER BY p.createdAt DESC")
+    List<Post> findByUserClassrooms(@Param("userId") Long userId);
+
+    @Query("SELECT DISTINCT p FROM Post p JOIN p.classrooms c WHERE c.id IN :classroomIds ORDER BY p.pinned DESC, p.createdAt DESC")
+    List<Post> findByClassroomsIdIn(@Param("classroomIds") List<Long> classroomIds);
+    
+    // 🔹 MÉTODO ALTERNATIVO - Busca posts pelas turmas do usuário (MAIS EFICIENTE)
+    // NO PostRepository.java - MELHORAR A QUERY
+    @Query("SELECT DISTINCT p FROM Post p " +
+        "JOIN FETCH p.author " +
+        "JOIN p.classrooms c " +
+        "JOIN c.users u " +
+        "WHERE u.id = :userId " +
+        "ORDER BY p.pinned DESC, p.createdAt DESC")
+    List<Post> findPostsByUserClassrooms(@Param("userId") Long userId);
 }

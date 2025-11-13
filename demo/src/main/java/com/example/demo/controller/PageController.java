@@ -164,7 +164,7 @@ public class PageController {
                 ((Student) existingUser).setMatricula(matricula);
             }
             
-            userService.update(existingUser);
+            userService.update(id, existingUser, matricula);
             return "redirect:/usuarios";
             
         } catch (Exception e) {
@@ -341,82 +341,140 @@ public class PageController {
     }
 
     // ===== ÁREA DO ALUNO (ALUNOS E PROFESSORES) =====
-    @GetMapping("/aluno/feed")
-    public String alunoFeed(Model model, HttpSession session,
-                           @RequestParam(required = false) String turma,
-                           @RequestParam(required = false) Boolean apenasProfessores,
-                           @RequestParam(required = false) String search) {
-        User usuario = (User) session.getAttribute("usuarioLogado");
-        if (usuario == null) {
-            return "redirect:/auth/login";
-        }
-        
-        // Verificar se é aluno ou professor - PERMITIR AMBOS
-        if (!(usuario instanceof Student) && !(usuario instanceof Professor)) {
-            return "redirect:/home?error=Acesso permitido apenas para alunos e professores";
-        }
-        
-        List<Post> todosPosts = postService.findAll();
-        List<Post> postsFiltrados = new ArrayList<>(todosPosts);
-        
-        // Aplicar filtros
-        if (apenasProfessores != null && apenasProfessores) {
-            postsFiltrados = postsFiltrados.stream()
-                .filter(post -> post.getAuthor() instanceof Professor)
-                .collect(Collectors.toList());
-        }
-        
-        if (search != null && !search.trim().isEmpty()) {
-            postsFiltrados = postsFiltrados.stream()
-                .filter(post -> post.getContent().toLowerCase().contains(search.toLowerCase()))
-                .collect(Collectors.toList());
-        }
-        
-        model.addAttribute("posts", postsFiltrados);
-        model.addAttribute("aluno", usuario);
-        model.addAttribute("turmaFiltro", turma);
-        model.addAttribute("apenasProfessores", apenasProfessores);
-        model.addAttribute("searchTerm", search);
-        model.addAttribute("postTypes", PostType.values());
-        
-        // Estatísticas para o dashboard
-        long totalPosts = todosPosts.size();
-        long postsProfessores = todosPosts.stream()
-            .filter(post -> post.getAuthor() instanceof Professor)
-            .count();
-        long postsImportantes = todosPosts.stream()
-            .filter(post -> post.getType() == PostType.IMPORTANT)
-            .count();
-        
-        model.addAttribute("totalPosts", totalPosts);
-        model.addAttribute("postsProfessores", postsProfessores);
-        model.addAttribute("postsImportantes", postsImportantes);
-        
-        return "aluno-feed";
+@GetMapping("/aluno/feed")
+public String alunoFeed(Model model, HttpSession session,
+                       @RequestParam(required = false) Long classroomId,
+                       @RequestParam(required = false) Boolean professorsOnly,
+                       @RequestParam(required = false) String search) {
+    User usuario = (User) session.getAttribute("usuarioLogado");
+    if (usuario == null) {
+        return "redirect:/auth/login";
     }
+    
+    System.out.println("🔥 === DEBUG INICIADO ===");
+    System.out.println("🔥 USUÁRIO: " + usuario.getName() + " (ID: " + usuario.getId() + ", Tipo: " + usuario.getType() + ")");
+    System.out.println("🔥 FILTROS - classroomId: " + classroomId + ", professorsOnly: " + professorsOnly + ", search: " + search);
+    
+    // 🔹 CARREGAR TURMAS DO USUÁRIO
+    List<Classroom> userClassrooms = userService.getUserClassrooms(usuario.getId());
+    System.out.println("🔥 TURMAS DO USUÁRIO: " + userClassrooms.size());
+    userClassrooms.forEach(t -> System.out.println("   - " + t.getName() + " (ID: " + t.getId() + ")"));
+    
+    List<Post> postsFiltrados;
+    
+    // 🔹 BUSCAR POSTS BASE - SEM FILTROS APLICADOS AINDA
+    if (!userClassrooms.isEmpty()) {
+        List<Long> classroomIds = userClassrooms.stream()
+            .map(Classroom::getId)
+            .collect(Collectors.toList());
+        
+        System.out.println("🔥 BUSCANDO POSTS DAS TURMAS: " + classroomIds);
+        
+        postsFiltrados = postService.findByClassrooms(classroomIds);
+        System.out.println("🔥 POSTS ENCONTRADOS (BASE): " + postsFiltrados.size());
+        
+    } else {
+        System.out.println("🔥 ⚠️ USUÁRIO NÃO TEM TURMAS!");
+        postsFiltrados = new ArrayList<>();
+    }
+    
+    // 🔹 APLICAR FILTROS SEQUENCIALMENTE
+    
+    // 1. Filtro de turma específica
+    if (classroomId != null) {
+        System.out.println("🔥 APLICANDO FILTRO DE TURMA: " + classroomId);
+        postsFiltrados = postsFiltrados.stream()
+            .filter(post -> post.getClassrooms().stream()
+                .anyMatch(c -> c.getId().equals(classroomId)))
+            .collect(Collectors.toList());
+        System.out.println("🔥 POSTS APÓS FILTRO DE TURMA: " + postsFiltrados.size());
+    }
+    
+    // 2. Filtro de apenas professores
+    if (professorsOnly != null && professorsOnly) {
+        System.out.println("🔥 FILTRANDO APENAS PROFESSORES");
+        postsFiltrados = postsFiltrados.stream()
+            .filter(post -> post.getAuthor() instanceof Professor)
+            .collect(Collectors.toList());
+        System.out.println("🔥 POSTS APÓS FILTRO DE PROFESSORES: " + postsFiltrados.size());
+    }
+    
+    // 3. Filtro de busca por texto
+    if (search != null && !search.trim().isEmpty()) {
+        System.out.println("🔥 FILTRANDO POR SEARCH: " + search);
+        postsFiltrados = postsFiltrados.stream()
+            .filter(post -> post.getContent().toLowerCase().contains(search.toLowerCase()))
+            .collect(Collectors.toList());
+        System.out.println("🔥 POSTS APÓS FILTRO DE BUSCA: " + postsFiltrados.size());
+    }
+    
+    System.out.println("🔥 TOTAL FINAL DE POSTS: " + postsFiltrados.size());
+    System.out.println("🔥 === DEBUG FINALIZADO ===");
+    
+    // 🔹 ORDENAR (fixados primeiro, depois por data)
+    postsFiltrados.sort((p1, p2) -> {
+        if (p1.isPinned() && !p2.isPinned()) return -1;
+        if (!p1.isPinned() && p2.isPinned()) return 1;
+        return p2.getCreatedAt().compareTo(p1.getCreatedAt());
+    });
+    
+    // 🔹 ADICIONAR ATRIBUTOS AO MODEL
+    model.addAttribute("user", usuario);
+    model.addAttribute("posts", postsFiltrados);
+    model.addAttribute("userClassrooms", userClassrooms);
+    model.addAttribute("classroomFilter", classroomId); // CORRIGIDO: usar classroomId
+    model.addAttribute("professorsOnly", professorsOnly); // CORRIGIDO: usar professorsOnly
+    model.addAttribute("searchTerm", search);
+    model.addAttribute("postTypes", PostType.values());
+    
+    // 🔹 ESTATÍSTICAS
+    long totalPosts = postsFiltrados.size();
+    long postsProfessores = postsFiltrados.stream()
+        .filter(post -> post.getAuthor() instanceof Professor)
+        .count();
+    long postsImportantes = postsFiltrados.stream()
+        .filter(post -> post.getType() == PostType.IMPORTANT)
+        .count();
+    
+    model.addAttribute("totalPosts", totalPosts);
+    model.addAttribute("postsProfessores", postsProfessores);
+    model.addAttribute("postsImportantes", postsImportantes);
+    
+    return "aluno-feed";
+}
 
-    @PostMapping("/aluno/feed/post")
-    public String criarPostAluno(@RequestParam String content,
-                                @RequestParam PostType type,
-                                HttpSession session) {
-        User autor = (User) session.getAttribute("usuarioLogado");
-        if (autor == null) {
-            return "redirect:/auth/login";
-        }
-        
-        // Verificar se é aluno ou professor
-        if (!(autor instanceof Student) && !(autor instanceof Professor)) {
-            return "redirect:/home?error=Acesso permitido apenas para alunos e professores";
-        }
-        
+  @PostMapping("/aluno/feed/post")
+public String criarPostAluno(@RequestParam String content,
+                            @RequestParam PostType type,
+                            @RequestParam Long classroomId,
+                            HttpSession session) {
+    User autor = (User) session.getAttribute("usuarioLogado");
+    if (autor == null) {
+        return "redirect:/auth/login";
+    }
+    
+    try {
         // Criar o post
         Post post = new Post();
         post.setContent(content);
         post.setType(type);
         post.setAuthor(autor);
         
+        // 🔹 ADICIONAR TURMA AO POST
+        if (classroomId != null) {
+            Optional<Classroom> classroomOpt = classroomService.findById(classroomId);
+            if (classroomOpt.isPresent()) {
+                Classroom classroom = classroomOpt.get();
+                post.addClassroom(classroom);
+            }
+        }
+        
         postService.create(post);
         return "redirect:/aluno/feed?success=Post publicado com sucesso!";
+        
+    } catch (Exception e) {
+        e.printStackTrace();
+        return "redirect:/aluno/feed?error=Erro ao publicar post: " + e.getMessage();
     }
 }
     // 🔹 Página de turmas do aluno - CORRIGIDO

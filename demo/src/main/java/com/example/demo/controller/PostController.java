@@ -1,12 +1,16 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.PostDTO;
 import com.example.demo.model.Post;
 import com.example.demo.model.PostType;
 import com.example.demo.service.PostService;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -17,6 +21,7 @@ public class PostController {
         this.service = service; 
     }
 
+    // Métodos existentes...
     @GetMapping
     public List<Post> getAll() { 
         return service.findAll(); 
@@ -82,6 +87,77 @@ public class PostController {
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    // 🔹 NOVOS ENDPOINTS PARA MANIPULAR A RELAÇÃO COM CLASSROOMS
+
+    @GetMapping("/classroom/{classroomId}")
+    public List<Post> getByClassroom(@PathVariable Long classroomId) {
+        return service.findByClassroom(classroomId);
+    }
+
+    @GetMapping("/classroom/{classroomId}/pinned")
+    public List<Post> getPinnedPostsByClassroom(@PathVariable Long classroomId) {
+        return service.findPinnedPostsByClassroom(classroomId);
+    }
+
+    @GetMapping("/classroom/{classroomId}/type/{type}")
+    public List<Post> getByClassroomAndType(@PathVariable Long classroomId, @PathVariable PostType type) {
+        return service.findByClassroomAndType(classroomId, type);
+    }
+
+    @PostMapping("/{postId}/classroom/{classroomId}")
+    public ResponseEntity<Post> addClassroomToPost(@PathVariable Long postId, @PathVariable Long classroomId) {
+        try {
+            Post updated = service.addClassroomToPost(postId, classroomId);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{postId}/classroom/{classroomId}")
+    public ResponseEntity<Post> removeClassroomFromPost(@PathVariable Long postId, @PathVariable Long classroomId) {
+        try {
+            Post updated = service.removeClassroomFromPost(postId, classroomId);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/{postId}/classrooms")
+    public ResponseEntity<Post> updatePostClassrooms(@PathVariable Long postId, @RequestBody List<Long> classroomIds) {
+        try {
+            Post updated = service.updatePostClassrooms(postId, classroomIds);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // NO PostController.java - ADICIONAR ESTE ENDPOINT
+    @GetMapping("/my-classrooms")
+    public ResponseEntity<List<Post>> getPostsByMyClassrooms(@RequestParam Long userId) {
+        try {
+            List<Post> posts = service.findPostsByUserClassrooms(userId);
+            return ResponseEntity.ok(posts);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+        // NO PostController.java
+    @GetMapping("/user/{userId}/feed")
+    public ResponseEntity<List<PostDTO>> getUserFeed(@PathVariable Long userId) {
+        try {
+            List<Post> posts = service.findPostsByUserClassrooms(userId);
+            List<PostDTO> postDTOs = posts.stream()
+                    .map(PostDTO::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(postDTOs);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 }

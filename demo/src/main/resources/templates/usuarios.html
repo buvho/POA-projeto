@@ -3,32 +3,183 @@
 <head>
   <meta charset="UTF-8">
   <title>Lista de Usuários</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  <style>
+    .page-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem 0;
+      margin-bottom: 2rem;
+      border-radius: 0 0 20px 20px;
+    }
+    .user-card {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+      margin-bottom: 1.5rem;
+    }
+    .user-card:hover {
+      transform: translateY(-5px);
+    }
+    .user-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: white;
+      margin-right: 1rem;
+    }
+    .student-avatar {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    .professor-avatar {
+      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+    }
+    .default-avatar {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    }
+    .badge-custom {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #6c757d;
+    }
+    .btn-action {
+      margin-right: 5px;
+      border-radius: 6px;
+    }
+    .stats-card {
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+  </style>
 </head>
 <body class="bg-light">
-<div class="container mt-5">
-  <h2>Usuários Cadastrados</h2>
-  <table class="table table-bordered mt-3">
-    <thead>
-    <tr>
-      <th>ID</th>
-      <th>Nome</th>
-      <th>Email</th>
-      <th>Tipo</th>
-      <th>Matrícula</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="u : ${usuarios}">
-      <td th:text="${u.id}"></td>
-      <td th:text="${u.name}"></td>
-      <td th:text="${u.email}"></td>
-      <td th:text="${u.type}"></td>
-      <td th:text="${u instanceof T(com.example.demo.model.Student) ? u.matricula : '—'}"></td>
-    </tr>
-    </tbody>
-  </table>
-  <a href="/cadastro" class="btn btn-success">Novo Usuário</a>
-</div>
+  <!-- Cabeçalho -->
+  <div class="page-header">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h1><i class="bi bi-people"></i> Lista de Usuários</h1>
+          <p class="lead mb-0">Gerencie todos os usuários do sistema</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <a href="/cadastro" class="btn btn-light btn-lg">
+            <i class="bi bi-person-plus"></i> Novo Usuário
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Estatísticas -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="stats-card">
+          <h3 class="text-primary" th:text="${#lists.size(usuarios)}">0</h3>
+          <p class="mb-0 text-muted">Total de Usuários</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stats-card">
+          <h3 class="text-success" th:text="${alunosCount}">0</h3>
+          <p class="mb-0 text-muted">Alunos</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stats-card">
+          <h3 class="text-info" th:text="${professoresCount}">0</h3>
+          <p class="mb-0 text-muted">Professores</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stats-card">
+          <h3 class="text-warning" th:text="${outrosCount}">0</h3>
+          <p class="mb-0 text-muted">Outros</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de Usuários -->
+    <div th:if="${#lists.isEmpty(usuarios)}" class="empty-state">
+      <i class="bi bi-people" style="font-size: 4rem;"></i>
+      <h3 class="mt-3">Nenhum usuário cadastrado</h3>
+      <p class="text-muted">Comece cadastrando o primeiro usuário no sistema.</p>
+      <a href="/cadastro" class="btn btn-primary btn-lg">
+        <i class="bi bi-person-plus"></i> Cadastrar Primeiro Usuário
+      </a>
+    </div>
+
+    <div th:unless="${#lists.isEmpty(usuarios)}">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead class="table-dark">
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Tipo</th>
+              <th>Matrícula</th>
+              <th class="text-center">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="user : ${usuarios}">
+              <td th:text="${user.id}"></td>
+              <td>
+                <strong th:text="${user.name}"></strong>
+              </td>
+              <td th:text="${user.email}"></td>
+              <td>
+                <span th:if="${user.type == 'Aluno'}" class="badge bg-primary">Aluno</span>
+                <span th:if="${user.type == 'Professor'}" class="badge bg-info">Professor</span>
+                <span th:if="${user.type == 'Usuário'}" class="badge bg-secondary">Usuário</span>
+              </td>
+              <td>
+                <span th:if="${user.type == 'Aluno'}" th:text="${user.matricula} ?: 'Não informada'"></span>
+                <span th:if="${user.type != 'Aluno'}" class="text-muted">-</span>
+              </td>
+              <td class="text-center">
+                <a th:href="@{/editar/{id}(id=${user.id})}" class="btn btn-outline-primary btn-sm btn-action">
+                  <i class="bi bi-pencil"></i> Editar
+                </a>
+                <button th:onclick="|confirmarExclusao(${user.id})|" class="btn btn-outline-danger btn-sm btn-action">
+                  <i class="bi bi-trash"></i> Excluir
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Botão Voltar -->
+    <div class="text-center mt-4">
+      <a href="/home" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar para Home
+      </a>
+    </div>
+  </div>
+
+  <script>
+    function confirmarExclusao(id) {
+      if (confirm('Tem certeza que deseja excluir este usuário?\nEsta ação não pode ser desfeita.')) {
+        window.location.href = '/excluir/' + id;
+      }
+    }
+  </script>
 </body>
 </html>

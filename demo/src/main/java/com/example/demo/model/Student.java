@@ -4,13 +4,13 @@ import jakarta.persistence.*;
 
 @Entity
 @PrimaryKeyJoinColumn(name = "id")
-public class Aluno extends User {
+public class Student extends User {
     private String matricula;
 
     // construtores
-    public Aluno() {}
+    public Student() {}
     
-    public Aluno(String name, String email, String matricula, String password) {
+    public Student(String name, String email, String matricula, String password) {
         super(name, email, password);
         this.matricula = matricula;
     }

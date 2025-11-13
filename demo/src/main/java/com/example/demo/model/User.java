@@ -2,6 +2,9 @@ package com.example.demo.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
@@ -18,6 +21,14 @@ public class User {
     private String password;
 
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @ManyToMany
+    @JoinTable(
+        name = "user_classroom",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "classroom_id")
+    )
+    private List<Classroom> classrooms = new ArrayList<>();
 
     // construtores
     public User() {}
@@ -47,4 +58,29 @@ public class User {
         return "Usuário";
     }
 
+    public List<Classroom> getClassrooms() { return classrooms; }
+    public void setClassrooms(List<Classroom> classrooms) { this.classrooms = classrooms; }
+
+    public void addClassroom(Classroom classroom) {
+        if (this.classrooms == null) {
+            this.classrooms = new ArrayList<>();
+        }
+        if (!this.classrooms.contains(classroom)) {
+            this.classrooms.add(classroom);
+            classroom.getUsers().add(this);
+        }
+    }
+
+    public void removeClassroom(Classroom classroom) {
+        if (this.classrooms != null) {
+            this.classrooms.remove(classroom);
+            classroom.getUsers().remove(this);
+        }
+    }
+
+    public Optional<Classroom> findClassroomById(Long classroomId) {
+        return this.classrooms.stream()
+                .filter(c -> c.getId().equals(classroomId))
+                .findFirst();
+    }
 }

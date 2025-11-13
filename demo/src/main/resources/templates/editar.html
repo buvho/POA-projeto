@@ -4,27 +4,50 @@
   <meta charset="UTF-8">
   <title>Editar Usuário</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  <style>
+    .turmas-container {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .turma-checkbox {
+      margin-bottom: 8px;
+    }
+    .turma-item {
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: background-color 0.2s;
+    }
+    .turma-item:hover {
+      background-color: #f8f9fa;
+    }
+  </style>
 </head>
 <body class="bg-light">
   <div class="container mt-5">
     <div class="row justify-content-center">
-      <div class="col-md-6">
+      <div class="col-md-8">
         <div class="card shadow">
           <div class="card-header bg-primary text-white">
             <h4 class="mb-0"><i class="bi bi-pencil"></i> Editar Usuário</h4>
           </div>
           <div class="card-body">
             <form th:action="@{/editar/{id}(id=${user.id})}" method="post">
-              <div class="mb-3">
-                <label for="name" class="form-label">Nome</label>
-                <input type="text" class="form-control" id="name" name="name" 
-                       th:value="${user.name}" required>
-              </div>
-              
-              <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="email" name="email" 
-                       th:value="${user.email}" required>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="name" class="form-label">Nome</label>
+                  <input type="text" class="form-control" id="name" name="name" 
+                         th:value="${user.name}" required>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                  <label for="email" class="form-label">Email</label>
+                  <input type="email" class="form-control" id="email" name="email" 
+                         th:value="${user.email}" required>
+                </div>
               </div>
               
               <div class="mb-3">
@@ -32,15 +55,41 @@
                 <input type="password" class="form-control" id="password" name="password">
               </div>
               
-              <div th:if="${user instanceof T(com.example.demo.model.Student)}" class="mb-3">
+              <div th:if="${user.type == 'Aluno'}" class="mb-3">
                 <label for="matricula" class="form-label">Matrícula</label>
                 <input type="text" class="form-control" id="matricula" name="matricula" 
                        th:value="${user.matricula}">
               </div>
+
+              <!-- 🔹 NOVO CAMPO: Seleção de Turmas para edição -->
+              <div th:if="${user.type == 'Aluno' or user.type == 'Professor'}" class="mb-4">
+                <label class="form-label">Turmas Conectadas</label>
+                <div class="alert alert-info">
+                  <small><i class="bi bi-info-circle"></i> Selecione as turmas que este usuário fará parte</small>
+                </div>
+                <div class="turmas-container" id="turmasList">
+                  <div class="text-center text-muted py-3">
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                    <span class="ms-2">Carregando turmas...</span>
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button type="button" class="btn btn-outline-primary btn-sm" onclick="carregarTurmas()">
+                    <i class="bi bi-arrow-clockwise"></i> Recarregar Turmas
+                  </button>
+                  <span class="text-muted ms-2">
+                    <small id="turmasCount">0 turmas disponíveis</small>
+                  </span>
+                </div>
+              </div>
               
               <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary">Atualizar Usuário</button>
-                <a href="/usuarios" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-check-lg"></i> Atualizar Usuário
+                </button>
+                <a href="/usuarios" class="btn btn-secondary">
+                  <i class="bi bi-x-lg"></i> Cancelar
+                </a>
               </div>
             </form>
           </div>
@@ -48,5 +97,86 @@
       </div>
     </div>
   </div>
+
+  <!-- 🔹 CORREÇÃO: Variáveis Thymeleaf no JavaScript -->
+  <script th:inline="javascript">
+    /*<![CDATA[*/
+    // Variáveis do Thymeleaf
+    const userId = /*[[${user.id}]]*/ null;
+    const userType = /*[[${user.type}]]*/ '';
+    /*]]>*/
+  </script>
+
+  <script>
+    // Função para carregar turmas e marcar as que o usuário já está conectado
+    function carregarTurmas() {
+      const turmasList = document.getElementById('turmasList');
+      const turmasCount = document.getElementById('turmasCount');
+
+      turmasList.innerHTML = `
+        <div class="text-center text-muted py-3">
+          <div class="spinner-border spinner-border-sm" role="status"></div>
+          <span class="ms-2">Carregando turmas...</span>
+        </div>
+      `;
+
+      // Primeiro carrega todas as turmas disponíveis
+      Promise.all([
+        fetch('/api/classrooms').then(r => r.json()),
+        fetch('/api/users/' + userId + '/classrooms').then(r => r.json())
+      ])
+      .then(([todasTurmas, turmasUsuario]) => {
+        if (todasTurmas.length === 0) {
+          turmasList.innerHTML = `
+            <div class="text-center text-muted py-3">
+              <i class="bi bi-inbox"></i><br>
+              Nenhuma turma cadastrada<br>
+              <small><a href="/turmas" class="text-primary">Cadastre a primeira turma</a></small>
+            </div>
+          `;
+          turmasCount.textContent = '0 turmas disponíveis';
+          return;
+        }
+
+        let html = '';
+        todasTurmas.forEach(turma => {
+          const estaConectado = turmasUsuario.some(tu => tu.id === turma.id);
+          const checked = estaConectado ? 'checked' : '';
+          
+          html += `
+            <div class="turma-item">
+              <div class="form-check turma-checkbox">
+                <input class="form-check-input" type="checkbox" name="classrooms" value="${turma.id}" id="turma-${turma.id}" ${checked}>
+                <label class="form-check-label" for="turma-${turma.id}">
+                  <strong>${turma.name}</strong>
+                  <small class="text-muted d-block">ID: ${turma.id}</small>
+                </label>
+              </div>
+            </div>
+          `;
+        });
+
+        turmasList.innerHTML = html;
+        turmasCount.textContent = `${todasTurmas.length} turmas disponíveis`;
+      })
+      .catch(error => {
+        console.error('Erro ao carregar turmas:', error);
+        turmasList.innerHTML = `
+          <div class="text-center text-danger py-3">
+            <i class="bi bi-exclamation-triangle"></i><br>
+            Erro ao carregar turmas<br>
+            <small>Tente recarregar a página</small>
+          </div>
+        `;
+      });
+    }
+
+    // Carregar turmas quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+      if (userType === 'Aluno' || userType === 'Professor') {
+        carregarTurmas();
+      }
+    });
+  </script>
 </body>
 </html>

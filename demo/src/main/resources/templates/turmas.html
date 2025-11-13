@@ -4,26 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciamento de Turmas</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
+        /* SEU ESTILO ORIGINAL PERMANECE EXATAMENTE IGUAL */
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 20px 20px;
+        }
+        .classroom-form {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
         .table-actions {
             white-space: nowrap;
             width: 1%;
         }
-        .page-header {
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        .classroom-form {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 25px;
-        }
         .btn-action {
             margin-right: 5px;
+            border-radius: 6px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6c757d;
         }
         .input-group-custom {
             display: flex;
@@ -38,21 +55,85 @@
             align-items: flex-end;
             gap: 15px;
         }
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .nav-tabs .nav-link {
+            color: #6c757d;
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link.active {
+            color: #495057;
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff;
+        }
+        /* Adicionando estilo para busca */
+        .search-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
     </style>
 </head>
-<body>
-    <div class="container mt-4">
-        <!-- Cabeçalho -->
-        <div class="page-header">
+<body class="bg-light">
+    <!-- Cabeçalho -->
+    <div class="page-header">
+        <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-8">
                     <h1><i class="bi bi-house-door"></i> Gerenciamento de Turmas</h1>
                     <p class="lead mb-0">Cadastre e gerencie todas as turmas do sistema</p>
                 </div>
                 <div class="col-md-4 text-md-end">
-                    <a th:href="@{/home}" class="btn btn-outline-secondary">
+                    <a th:href="@{/home}" class="btn btn-outline-light btn-lg">
                         <i class="bi bi-arrow-left"></i> Voltar para Home
                     </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Navegação entre páginas -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <ul class="nav nav-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/usuarios">
+                            <i class="bi bi-people"></i> Usuários
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/turmas">
+                            <i class="bi bi-house-door"></i> Turmas
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Estatísticas -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h3 class="text-primary" id="totalTurmas">0</h3>
+                    <p class="mb-0 text-muted">Total de Turmas</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h3 class="text-success" id="turmasComUsuarios">0</h3>
+                    <p class="mb-0 text-muted">Turmas com Usuários</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h3 class="text-warning" id="turmasVazias">0</h3>
+                    <p class="mb-0 text-muted">Turmas Vazias</p>
                 </div>
             </div>
         </div>
@@ -60,7 +141,26 @@
         <!-- Alertas -->
         <div id="alertContainer"></div>
 
-        <!-- Formulário SIMPLES para adicionar/editar turma -->
+        <!-- Barra de Busca -->
+        <div class="search-container">
+            <div class="row align-items-end">
+                <div class="col-md-6">
+                    <label for="searchInput" class="form-label">Buscar Turmas</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchInput" 
+                               placeholder="Digite o nome da turma...">
+                        <button class="btn btn-outline-secondary" type="button" id="searchBtn">
+                            <i class="bi bi-search"></i> Buscar
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button" id="clearSearch" style="display: none;">
+                            <i class="bi bi-x-circle"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulário para adicionar/editar turma -->
         <div class="classroom-form">
             <h4 id="formTitle">Cadastrar Nova Turma</h4>
             
@@ -72,7 +172,9 @@
                     <div class="input-field">
                         <label for="name" class="form-label">Nome da Turma</label>
                         <input type="text" class="form-control" id="name" 
-                               placeholder="Digite o nome da turma" required>
+                               placeholder="Digite o nome da turma" required
+                               maxlength="100">
+                        <div class="form-text">Máximo 100 caracteres</div>
                     </div>
                     
                     <!-- Div dos botões -->
@@ -92,15 +194,21 @@
         <div class="card" id="turmasCard" style="display: none;">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-list"></i> Lista de Turmas</h5>
-                <span class="badge bg-primary" id="turmasCount">0 turmas</span>
+                <div>
+                    <span class="badge bg-primary me-2" id="turmasCount">0 turmas</span>
+                    <span class="badge bg-success" id="filterIndicator" style="display: none;">
+                        <i class="bi bi-funnel"></i> Filtrado
+                    </span>
+                </div>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover">
+                    <table class="table table-striped table-hover mb-0">
                         <thead class="table-dark">
                             <tr>
                                 <th>ID</th>
                                 <th>Nome da Turma</th>
+                                <th>Total de Usuários</th>
                                 <th class="table-actions">Ações</th>
                             </tr>
                         </thead>
@@ -113,9 +221,9 @@
         </div>
 
         <!-- Estado vazio -->
-        <div id="emptyState" class="text-center py-5">
-            <i class="bi bi-inbox" style="font-size: 4rem; color: #6c757d;"></i>
-            <h3 class="mt-3 text-muted">Nenhuma turma cadastrada</h3>
+        <div id="emptyState" class="empty-state">
+            <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+            <h3 class="mt-3">Nenhuma turma cadastrada</h3>
             <p class="text-muted">Comece cadastrando a primeira turma usando o formulário acima.</p>
         </div>
     </div>
@@ -142,9 +250,10 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_BASE_URL = '/api/Classrooms';
+        // 🔹 CORREÇÃO: Rota da API corrigida
+        const API_BASE_URL = '/api/classrooms';
         const alertContainer = document.getElementById('alertContainer');
         const classroomForm = document.getElementById('classroomForm');
         const turmasTable = document.getElementById('turmasTable');
@@ -155,14 +264,30 @@
         const submitBtn = document.getElementById('submitBtn');
         const cancelEditBtn = document.getElementById('cancelEdit');
         const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        const totalTurmas = document.getElementById('totalTurmas');
+        const turmasComUsuarios = document.getElementById('turmasComUsuarios');
+        const turmasVazias = document.getElementById('turmasVazias');
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const clearSearch = document.getElementById('clearSearch');
+        const filterIndicator = document.getElementById('filterIndicator');
         
         let turmaToDelete = null;
         let todasTurmas = [];
+        let turmasFiltradas = [];
+        let isFiltered = false;
 
         // Event Listeners
         classroomForm.addEventListener('submit', handleFormSubmit);
         document.getElementById('confirmDelete').addEventListener('click', deleteClassroom);
         cancelEditBtn.addEventListener('click', cancelEdit);
+        searchBtn.addEventListener('click', handleSearch);
+        clearSearch.addEventListener('click', clearSearchHandler);
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        });
 
         // Carregar turmas quando a página carregar
         document.addEventListener('DOMContentLoaded', function() {
@@ -175,6 +300,7 @@
                 if (!response.ok) throw new Error('Erro ao carregar turmas');
                 
                 todasTurmas = await response.json();
+                await carregarEstatisticasTurmas(todasTurmas);
                 renderTurmas(todasTurmas);
                 
             } catch (error) {
@@ -183,58 +309,92 @@
             }
         }
 
-        function renderTurmas(turmas) {
-            turmasTable.innerHTML = '';
+        async function carregarEstatisticasTurmas(turmas) {
+            let turmasComUsuariosCount = 0;
             
-            if (turmas.length === 0) {
-                // Mostrar estado vazio e esconder tabela
-                emptyState.style.display = 'block';
-                turmasCard.style.display = 'none';
-                turmasCount.textContent = '0 turmas';
-                return;
+            // Contar turmas com usuários
+            for (const turma of turmas) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/${turma.id}/user-count`);
+                    if (response.ok) {
+                        const count = await response.json();
+                        turma.userCount = count;
+                        if (count > 0) {
+                            turmasComUsuariosCount++;
+                        }
+                    }
+                } catch (error) {
+                    turma.userCount = 0;
+                    console.error('Erro ao carregar contagem de usuários:', error);
+                }
             }
             
-            // Mostrar tabela e esconder estado vazio
-            emptyState.style.display = 'none';
-            turmasCard.style.display = 'block';
-            turmasCount.textContent = turmas.length + ' turma' + (turmas.length !== 1 ? 's' : '');
-            
-            turmas.forEach(turma => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${turma.id}</td>
-                    <td><strong>${turma.name}</strong></td>
-                    <td class="table-actions">
-                        <button type="button" class="btn btn-sm btn-outline-primary btn-action edit-btn" 
-                                data-id="${turma.id}" data-name="${turma.name}">
-                            <i class="bi bi-pencil"></i> Editar
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-action delete-btn" 
-                                data-id="${turma.id}" data-name="${turma.name}">
-                            <i class="bi bi-trash"></i> Excluir
-                        </button>
-                    </td>
-                `;
-                turmasTable.appendChild(row);
-            });
-            
-            // Adicionar event listeners aos novos botões
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const id = btn.getAttribute('data-id');
-                    const name = btn.getAttribute('data-name');
-                    editarTurma(id, name);
-                });
-            });
-            
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    turmaToDelete = btn.getAttribute('data-id');
-                    document.getElementById('turmaNome').textContent = btn.getAttribute('data-name');
-                    deleteModal.show();
-                });
-            });
+            // Atualizar estatísticas
+            totalTurmas.textContent = turmas.length;
+            turmasComUsuarios.textContent = turmasComUsuariosCount;
+            turmasVazias.textContent = turmas.length - turmasComUsuariosCount;
         }
+
+        function renderTurmas(turmas) {
+    turmasTable.innerHTML = '';
+    
+    if (turmas.length === 0) {
+        emptyState.style.display = 'block';
+        turmasCard.style.display = 'none';
+        turmasCount.textContent = '0 turmas';
+        filterIndicator.style.display = isFiltered ? 'inline-block' : 'none';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    turmasCard.style.display = 'block';
+    turmasCount.textContent = turmas.length + ' turma' + (turmas.length !== 1 ? 's' : '');
+    filterIndicator.style.display = isFiltered ? 'inline-block' : 'none';
+    clearSearch.style.display = isFiltered ? 'inline-block' : 'none';
+    
+    turmas.forEach(turma => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${turma.id}</td>
+            <td><strong>${turma.name}</strong></td>
+            <td>
+                <span class="badge ${turma.userCount > 0 ? 'bg-success' : 'bg-secondary'}">
+                    ${turma.userCount || 0} usuário${turma.userCount !== 1 ? 's' : ''}
+                </span>
+            </td>
+            <td class="table-actions">
+                <button type="button" class="btn btn-sm btn-outline-primary btn-action edit-btn" 
+                        data-id="${turma.id}">
+                    <i class="bi bi-pencil"></i> Editar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-action delete-btn" 
+                        data-id="${turma.id}" data-name="${turma.name}">
+                    <i class="bi bi-trash"></i> Excluir
+                </button>
+            </td>
+        `;
+        turmasTable.appendChild(row);
+    });
+    
+    // 🔹 CORREÇÃO: Event listeners para os botões
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const name = this.closest('tr').querySelector('td:nth-child(2) strong').textContent;
+            editarTurma(id, name);
+        });
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            turmaToDelete = this.getAttribute('data-id');
+            const turmaName = this.getAttribute('data-name');
+            document.getElementById('turmaNome').textContent = turmaName;
+            deleteModal.show();
+        });
+    });
+}
+
 
         async function handleFormSubmit(e) {
             e.preventDefault();
@@ -244,6 +404,11 @@
             
             if (!name) {
                 showAlert('Por favor, informe o nome da turma.', 'warning');
+                return;
+            }
+            
+            if (name.length > 100) {
+                showAlert('O nome da turma deve ter no máximo 100 caracteres.', 'warning');
                 return;
             }
             
@@ -272,7 +437,8 @@
                 }
                 
                 if (!response.ok) {
-                    throw new Error(classroomId ? 'Erro ao atualizar turma' : 'Erro ao criar turma');
+                    const errorText = await response.text();
+                    throw new Error(errorText || (classroomId ? 'Erro ao atualizar turma' : 'Erro ao criar turma'));
                 }
                 
                 const savedClassroom = await response.json();
@@ -290,6 +456,38 @@
             } catch (error) {
                 showAlert(error.message, 'danger');
             }
+        }
+
+        async function handleSearch() {
+            const searchTerm = searchInput.value.trim();
+            
+            if (!searchTerm) {
+                clearSearchHandler();
+                return;
+            }
+            
+            try {
+                // 🔹 CORREÇÃO: Usar o endpoint de busca correto
+                const response = await fetch(`${API_BASE_URL}/search?name=${encodeURIComponent(searchTerm)}`);
+                if (!response.ok) throw new Error('Erro na busca');
+                
+                turmasFiltradas = await response.json();
+                isFiltered = true;
+                await carregarEstatisticasTurmas(turmasFiltradas);
+                renderTurmas(turmasFiltradas);
+                
+                showAlert(`Encontradas ${turmasFiltradas.length} turmas para "${searchTerm}"`, 'info');
+                
+            } catch (error) {
+                console.error('Erro na busca:', error);
+                showAlert('Erro ao buscar turmas: ' + error.message, 'danger');
+            }
+        }
+
+        function clearSearchHandler() {
+            searchInput.value = '';
+            isFiltered = false;
+            renderTurmas(todasTurmas);
         }
 
         function editarTurma(id, name) {

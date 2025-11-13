@@ -70,4 +70,40 @@ public class UserService {
     public void delete(Long id) {
         userRepository.deleteById(id);
     }
+
+    // 🔹 SALVAR usuário (método novo - importante para edição)
+    public User save(User user) {
+        // Se a senha não está codificada (quando vem do formulário de edição)
+        if (user.getPassword() != null && !user.getPassword().startsWith("$2a$")) {
+            user.setPassword(encoder.encode(user.getPassword()));
+        }
+        return userRepository.save(user);
+    }
+
+    // 🔹 ATUALIZAR usuário (método novo - para edição)
+    public User update(Long id, User userDetails, String newPassword) {
+        return userRepository.findById(id)
+            .map(user -> {
+                user.setName(userDetails.getName());
+                user.setEmail(userDetails.getEmail());
+                
+                // Atualiza senha apenas se for fornecida uma nova
+                if (newPassword != null && !newPassword.trim().isEmpty()) {
+                    user.setPassword(encoder.encode(newPassword));
+                }
+                
+                // Se for Student, atualiza a matrícula
+                if (user instanceof Student && userDetails instanceof Student) {
+                    ((Student) user).setMatricula(((Student) userDetails).getMatricula());
+                }
+                
+                return userRepository.save(user);
+            })
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + id));
+    }
+
+    // 🔹 Buscar por email (método auxiliar para validações)
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
 }

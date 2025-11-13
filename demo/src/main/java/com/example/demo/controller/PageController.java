@@ -4,6 +4,9 @@ import com.example.demo.model.Professor;
 import com.example.demo.model.Student;
 import com.example.demo.model.User;
 import com.example.demo.service.UserService;
+
+import jakarta.servlet.http.HttpSession;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -65,4 +68,14 @@ public class PageController {
         model.addAttribute("usuarios", service.findAll());
         return "usuarios";
     }
+
+    @GetMapping("/home")
+    public String home(Model model, HttpSession session) {
+    User usuario = (User) session.getAttribute("usuarioLogado");
+    if (usuario == null) {
+        return "redirect:auth/login";
+    }
+    model.addAttribute("usuario", usuario);
+    return "home";
+}
 }

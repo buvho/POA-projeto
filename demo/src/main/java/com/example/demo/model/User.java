@@ -10,9 +10,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    public String getType() {
-        return this.getClass().getSimpleName();
-    }
+
 
     private String name;
     private String email;
@@ -41,4 +39,11 @@ public class User {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public String getType() {
+        if (this instanceof Student) return "Aluno";
+        if (this instanceof Professor) return "Professor";
+        return "Usuário";
+    }
+
 }
